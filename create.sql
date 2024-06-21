@@ -13,8 +13,6 @@
     Punto 4
         Detalle en opciones de carrera porque le faltan reglas
 */
-
---
 CREATE DATABASE BD_Pruebas;
 
 use BD_Pruebas;
@@ -36,7 +34,7 @@ ADD CONSTRAINT UK_curp UNIQUE (curp),
     - El correo debe cumplir con el formato de que comience con letras, números, puntos, guiones bajos, porcentajes y signos más o menos, seguido de un arroba, seguido de gmail, hotmail u outlook, seguido de un punto y dos letras.
     - La CURP debe cumplir con el formato de que comience con cuatro letras mayúsculas, seguido de seis números, seguido de una letra H o M, seguido de cinco letras mayúsculas y finalmente dos números.
 */
-ADD CONSTRAINT CHK_correo CHECK (correo REGEXP '^[a-zA-Z0-9._%+-]+@(gmail|hotmail|outlook)\.[a-zA-Z]{2,}$'),
+ADD CONSTRAINT CHK_correo CHECK (correo REGEXP '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'),
 ADD CONSTRAINT CHK_curp CHECK (curp REGEXP '^[A-Z]{4}[0-9]{6}[HM][A-Z]{5}[0-9]{2}$');
 
 
