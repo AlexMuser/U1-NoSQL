@@ -49,7 +49,7 @@ CREATE TABLE convocatorias (
 );
 
 ALTER TABLE convocatorias
-ADD CONSTRAINT UC_anio_numero UNIQUE (anio, numero_convocatoria);
+ADD CONSTRAINT UK_anio_numero UNIQUE (anio, numero_convocatoria);
 
 /*
     2)
@@ -91,19 +91,6 @@ CREATE TABLE costos_examen (
 ALTER TABLE costos_examen
 ADD CONSTRAINT CHK_costo CHECK (costo > 0);
 
-CREATE TABLE registro_examen (
-    id_regexamen INT AUTO_INCREMENT PRIMARY KEY,
-    aspirante_id INT,
-    convocatoria_id INT,
-    token VARCHAR(100) NOT NULL,
-    fecha_solicitud TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    estado ENUM('PENDIENTE', 'COMPLETADO') DEFAULT 'PENDIENTE',
-    FOREIGN KEY (aspirante_id) REFERENCES aspirantes(id_aspirante),
-    FOREIGN KEY (convocatoria_id) REFERENCES convocatorias(id_convocatoria),
-    UNIQUE (aspirante_id, convocatoria_id),
-    UNIQUE (token)
-);
-
 CREATE TABLE catalogo_carreras (
     id_carrera INT AUTO_INCREMENT PRIMARY KEY,
     nombre_carrera VARCHAR(100) NOT NULL,
@@ -111,6 +98,8 @@ CREATE TABLE catalogo_carreras (
     fecha_alta DATE NOT NULL DEFAULT CURRENT_DATE
 );
 
+ALTER TABLE catalogo_carreras
+ADD CONSTRAINT UK_nombre_carrera UNIQUE (nombre_carrera);
 
 /*
     4)
@@ -131,7 +120,6 @@ END//
 
 DELIMITER ;
 
-
 CREATE TABLE opciones_carrera (
     id INT AUTO_INCREMENT PRIMARY KEY,
     aspirante_id INT,
@@ -140,11 +128,13 @@ CREATE TABLE opciones_carrera (
     prioridad INT NOT NULL,
     FOREIGN KEY (aspirante_id) REFERENCES aspirantes(id_aspirante),
     FOREIGN KEY (convocatoria_id) REFERENCES convocatorias(id_convocatoria),
-    FOREIGN KEY (carrera_id) REFERENCES catalogo_carreras(id_carrera),
-    CHECK prioridad >= 1,
-    UNIQUE (aspirante_id, convocatoria_id, prioridad)
+    FOREIGN KEY (carrera_id) REFERENCES catalogo_carreras(id_carrera)
 );
 
+ALTER TABLE opciones_carrera
+ADD CONSTRAINT CHK_prioridad CHECK (prioridad >= 1),
+ADD CONSTRAINT UK_aspirante_convocatoria_prioridad UNIQUE (aspirante_id, convocatoria_id, prioridad),
+ADD CONSTRAINT UK_aspirante_convocatoria_carrera UNIQUE (aspirante_id, convocatoria_id, carrera_id);
 
 --Quiser usar un check pero me botaba este error, por eso implemente el siguiente Trigger
 
@@ -175,7 +165,20 @@ END//
 DELIMITER ;
 
 
+CREATE TABLE registro_examen (
+    id_regexamen INT AUTO_INCREMENT PRIMARY KEY,
+    aspirante_id INT,
+    convocatoria_id INT,
+    token VARCHAR(100) NOT NULL,
+    fecha_solicitud TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    estado ENUM('PENDIENTE', 'COMPLETADO') DEFAULT 'PENDIENTE',
+    FOREIGN KEY (aspirante_id) REFERENCES aspirantes(id_aspirante),
+    FOREIGN KEY (convocatoria_id) REFERENCES convocatorias(id_convocatoria)
+);
 
+ALTER TABLE registro_examen
+ADD CONSTRAINT UK_aspirante_convocatoria UNIQUE (aspirante_id, convocatoria_id),
+ADD CONSTRAINT UK_token UNIQUE (token);
 
 /*No permite cambiar el estatus a completado, hasta que 
  el aspirante tenga seleccionadas sus tres opciones de carrera 
@@ -188,25 +191,26 @@ CREATE PROCEDURE completar_registro(
     IN p_convocatoria_id INT
 )
 BEGIN
-    DECLARE v_opciones_carrera_completas BOOLEAN DEFAULT FALSE;
+    DECLARE v_cantidad_opciones INT DEFAULT 0;
 
-   --Verificamos las opc de carrera selecionada por un estudiante
-    SELECT TRUE INTO v_opciones_carrera_completas
-    FROM opciones_carrera oc
-    INNER JOIN catalogo_carreras cc ON oc.carrera_id = cc.id_carrera
-    WHERE oc.aspirante_id = p_aspirante_id AND oc.convocatoria_id = p_convocatoria_id
-        AND cc.estatus = 'activa';
+    -- Verificamos que el aspirante haya seleccionado al menos tres opciones de carrera
+    SELECT COUNT(*)
+    INTO v_cantidad_opciones
+    FROM opciones_carrera
+    WHERE aspirante_id = p_aspirante_id AND convocatoria_id = p_convocatoria_id;
 
     -- Actualizar el estado a COMPLETADO
-    IF v_opciones_carrera_completas THEN
+    IF v_cantidad_opciones >= 3 THEN
         UPDATE registro_examen
         SET estado = 'COMPLETADO'
         WHERE aspirante_id = p_aspirante_id AND convocatoria_id = p_convocatoria_id;
     ELSE
-    
         SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'No se pueden completar el registro del aspirante porque no ha seleccionado opciones de carrera activas';
+        SET MESSAGE_TEXT = 'El aspirante debe seleccionar al menos tres opciones de carrera para completar el registro.';
     END IF;
 END//
 
 DELIMITER ;
+
+-- Ejemplo de uso del procedimiento almacenado
+-- CALL completar_registro(1, 1);
