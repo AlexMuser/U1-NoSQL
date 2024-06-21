@@ -14,7 +14,7 @@
         Detalle en opciones de carrera porque le faltan reglas
 */
 
-//
+-- Crear la base de datos
 CREATE DATABASE BD_Pruebas;
 
 use BD_Pruebas;
