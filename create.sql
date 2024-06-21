@@ -7,8 +7,7 @@
         No se pueden tener más de dos convocatorias por año
 
     Punto 3
-        No se puede registrar un token, si el usuario no ha terminado el registro
-        El usuario debe terminar el registro para tener el token (A nivel base de datos)
+        El usuario puede pedir los token que desee siempre y cuando este en PENDIENTE. Si esta en COMPLETO no se puede pedir token
 
     Punto 4
         Detalle en opciones de carrera porque le faltan reglas
@@ -96,34 +95,14 @@ CREATE TABLE registro_examen (
     id_regexamen INT AUTO_INCREMENT PRIMARY KEY,
     aspirante_id INT,
     convocatoria_id INT,
+    token VARCHAR(100) NOT NULL,
     fecha_solicitud TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     estado ENUM('PENDIENTE', 'COMPLETADO') DEFAULT 'PENDIENTE',
     FOREIGN KEY (aspirante_id) REFERENCES aspirantes(id_aspirante),
     FOREIGN KEY (convocatoria_id) REFERENCES convocatorias(id_convocatoria),
-    UNIQUE (aspirante_id, convocatoria_id)
+    UNIQUE (aspirante_id, convocatoria_id),
+    UNIQUE (token)
 );
-
-CREATE TABLE tokens (
-    id_token INT AUTO_INCREMENT PRIMARY KEY,
-    token VARCHAR(100) NOT NULL UNIQUE,
-    registro_examen_id INT,
-    FOREIGN KEY (registro_examen_id) REFERENCES registro_examen(id_regexamen)
-);
-
-DELIMITER $$
-
-CREATE TRIGGER asignar_token
-AFTER INSERT ON registro_examen
-FOR EACH ROW
-BEGIN
-    DECLARE new_token VARCHAR(100);
-    SET new_token = CONCAT('TOKEN_', LPAD(CONV(FLOOR(RAND() * 1000000), 10, 36), 6, '0'));
-    
-    INSERT INTO tokens (token, registro_examen_id) VALUES (new_token, NEW.id_regexamen);
-END$$
-
-DELIMITER ;
-
 
 CREATE TABLE catalogo_carreras (
     id_carrera INT AUTO_INCREMENT PRIMARY KEY,
