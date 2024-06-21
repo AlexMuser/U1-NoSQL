@@ -96,14 +96,34 @@ CREATE TABLE registro_examen (
     id_regexamen INT AUTO_INCREMENT PRIMARY KEY,
     aspirante_id INT,
     convocatoria_id INT,
-    token VARCHAR(100) NOT NULL,
     fecha_solicitud TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     estado ENUM('PENDIENTE', 'COMPLETADO') DEFAULT 'PENDIENTE',
     FOREIGN KEY (aspirante_id) REFERENCES aspirantes(id_aspirante),
     FOREIGN KEY (convocatoria_id) REFERENCES convocatorias(id_convocatoria),
-    UNIQUE (aspirante_id, convocatoria_id),
-    UNIQUE (token)
+    UNIQUE (aspirante_id, convocatoria_id)
 );
+
+CREATE TABLE tokens (
+    id_token INT AUTO_INCREMENT PRIMARY KEY,
+    token VARCHAR(100) NOT NULL UNIQUE,
+    registro_examen_id INT,
+    FOREIGN KEY (registro_examen_id) REFERENCES registro_examen(id_regexamen)
+);
+
+DELIMITER $$
+
+CREATE TRIGGER asignar_token
+AFTER INSERT ON registro_examen
+FOR EACH ROW
+BEGIN
+    DECLARE new_token VARCHAR(100);
+    SET new_token = CONCAT('TOKEN_', LPAD(CONV(FLOOR(RAND() * 1000000), 10, 36), 6, '0'));
+    
+    INSERT INTO tokens (token, registro_examen_id) VALUES (new_token, NEW.id_regexamen);
+END$$
+
+DELIMITER ;
+
 
 CREATE TABLE catalogo_carreras (
     id_carrera INT AUTO_INCREMENT PRIMARY KEY,
@@ -142,7 +162,7 @@ CREATE TABLE opciones_carrera (
     FOREIGN KEY (aspirante_id) REFERENCES aspirantes(id_aspirante),
     FOREIGN KEY (convocatoria_id) REFERENCES convocatorias(id_convocatoria),
     FOREIGN KEY (carrera_id) REFERENCES catalogo_carreras(id_carrera),
-    CHECK (prioridad >= 1 AND prioridad <= 3),
+    CHECK prioridad >= 1,
     UNIQUE (aspirante_id, convocatoria_id, prioridad)
 );
 
