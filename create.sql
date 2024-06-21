@@ -15,6 +15,7 @@
 */
 
 -- Crear la base de datos
+-- 
 CREATE DATABASE BD_Pruebas;
 
 use BD_Pruebas;
