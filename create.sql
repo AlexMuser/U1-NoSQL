@@ -13,6 +13,8 @@
     Punto 4
         Detalle en opciones de carrera porque le faltan reglas
 */
+
+//
 CREATE DATABASE BD_Pruebas;
 
 use BD_Pruebas;
