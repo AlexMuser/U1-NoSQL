@@ -43,13 +43,13 @@ CREATE TABLE convocatorias (
 
 -- Tabla costos_examen
 CREATE TABLE costos_examen (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    convocatoria_id INT,
+    id_convocatoria INT PRIMARY KEY,
     costo DECIMAL(10, 2) NOT NULL,
-    FOREIGN KEY (convocatoria_id) REFERENCES convocatorias(id_convocatoria),
+    FOREIGN KEY (id_convocatoria) REFERENCES convocatorias(id_convocatoria),
     CONSTRAINT CHK_costo CHECK (costo > 0)
 );
 
+-- Tabla catalogo_carreras
 CREATE TABLE catalogo_carreras (
     id_carrera INT AUTO_INCREMENT PRIMARY KEY,
     nombre_carrera VARCHAR(100) NOT NULL,
