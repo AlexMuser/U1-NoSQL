@@ -50,14 +50,12 @@ CREATE TABLE costos_examen (
     CONSTRAINT CHK_costo CHECK (costo > 0)
 );
 
--- Tabla catalogo_carreras
 CREATE TABLE catalogo_carreras (
     id_carrera INT AUTO_INCREMENT PRIMARY KEY,
     nombre_carrera VARCHAR(100) NOT NULL,
     estatus ENUM('activa', 'inactiva') NOT NULL DEFAULT 'activa',
-    fecha_alta DATE NOT NULL DEFAULT CURRENT_DATE,
-    CONSTRAINT UK_nombre_carrera UNIQUE (nombre_carrera),
-    CONSTRAINT CHK_fecha_alta CHECK (fecha_alta >= CURRENT_DATE)
+    fecha_alta DATE NOT NULL,
+    CONSTRAINT UK_nombre_carrera UNIQUE (nombre_carrera)
 );
 
 -- Tabla opciones_carrera
@@ -73,7 +71,7 @@ CREATE TABLE opciones_carrera (
     CONSTRAINT CHK_prioridad CHECK (prioridad >= 1),
     CONSTRAINT UK_aspirante_convocatoria_prioridad UNIQUE (aspirante_id, convocatoria_id, prioridad),
     CONSTRAINT UK_aspirante_convocatoria_carrera UNIQUE (aspirante_id, convocatoria_id, carrera_id),
-    CONSTRAINT UK_aspirante_convocatoria UNIQUE (aspirante_id, convocatoria_id)
+    CONSTRAINT UK_aspirante_convocatoria UNIQUE (aspirante_id, convocatoria_id) 
 );
 
 -- Trigger para asegurar que la carrera esté activa antes de insertar en opciones_carrera
