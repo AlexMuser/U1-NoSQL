@@ -21,13 +21,15 @@ USE BD_Pruebas;
 -- Tabla aspirantes
 CREATE TABLE aspirantes (
     id_aspirante INT AUTO_INCREMENT PRIMARY KEY,
+    id_convocatoria INT,
     nombre VARCHAR(100) NOT NULL,
     correo VARCHAR(100) NOT NULL,
     curp VARCHAR(18) NOT NULL,
     CONSTRAINT UK_correo UNIQUE (correo),
     CONSTRAINT UK_curp UNIQUE (curp),
     CONSTRAINT CHK_correo CHECK (correo REGEXP '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'),
-    CONSTRAINT CHK_curp CHECK (curp REGEXP '^[A-Z]{4}[0-9]{6}[HM][A-Z]{5}[0-9]{2}$')
+    CONSTRAINT CHK_curp CHECK (curp REGEXP '^[A-Z]{4}[0-9]{6}[HM][A-Z]{5}[0-9]{2}$'),
+    FOREIGN KEY (id_convocatoria) REFERENCES convocatorias(id_convocatoria)
 );
 
 -- Tabla convocatorias
@@ -38,7 +40,8 @@ CREATE TABLE convocatorias (
     fecha_inicio DATE NOT NULL,
     fecha_fin DATE NOT NULL,
     CONSTRAINT UK_anio_numero UNIQUE (anio, numero_convocatoria),
-    CONSTRAINT CHK_numero_convocatoria CHECK (numero_convocatoria IN (1, 2))
+    CONSTRAINT CHK_numero_convocatoria CHECK (numero_convocatoria IN (1, 2)),
+    CONSTRAINT CHK_anio CHECK (anio > 0)
 );
 
 -- Tabla costos_examen
@@ -62,11 +65,9 @@ CREATE TABLE catalogo_carreras (
 CREATE TABLE opciones_carrera (
     id INT AUTO_INCREMENT PRIMARY KEY,
     aspirante_id INT,
-    convocatoria_id INT,
     carrera_id INT,
     prioridad INT NOT NULL,
     FOREIGN KEY (aspirante_id) REFERENCES aspirantes(id_aspirante),
-    FOREIGN KEY (convocatoria_id) REFERENCES convocatorias(id_convocatoria),
     FOREIGN KEY (carrera_id) REFERENCES catalogo_carreras(id_carrera),
     CONSTRAINT CHK_prioridad CHECK (prioridad >= 1),
     CONSTRAINT UK_aspirante_convocatoria_prioridad UNIQUE (aspirante_id, convocatoria_id, prioridad),
