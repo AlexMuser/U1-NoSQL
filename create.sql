@@ -14,112 +14,53 @@
 */
 
 -- Crear la base de datos
--- 
 CREATE DATABASE BD_Pruebas;
 
-use BD_Pruebas;
+USE BD_Pruebas;
 
+-- Tabla aspirantes
 CREATE TABLE aspirantes (
     id_aspirante INT AUTO_INCREMENT PRIMARY KEY,
     nombre VARCHAR(100) NOT NULL,
     correo VARCHAR(100) NOT NULL,
-    curp VARCHAR(18) NOT NULL
+    curp VARCHAR(18) NOT NULL,
+    CONSTRAINT UK_correo UNIQUE (correo),
+    CONSTRAINT UK_curp UNIQUE (curp),
+    CONSTRAINT CHK_correo CHECK (correo REGEXP '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'),
+    CONSTRAINT CHK_curp CHECK (curp REGEXP '^[A-Z]{4}[0-9]{6}[HM][A-Z]{5}[0-9]{2}$')
 );
 
-ALTER TABLE aspirantes
-ADD CONSTRAINT UK_correo UNIQUE (correo),
-ADD CONSTRAINT UK_curp UNIQUE (curp),
-/*
-    1)
-    A continuaciòn se agregan las expresiones regulares para validar el correo y la curp
-    el cual tiene como objetivo lo siguiente:
-    - El correo debe cumplir con el formato de que comience con letras, números, puntos, guiones bajos, porcentajes y signos más o menos, seguido de un arroba, seguido de gmail, hotmail u outlook, seguido de un punto y dos letras.
-    - La CURP debe cumplir con el formato de que comience con cuatro letras mayúsculas, seguido de seis números, seguido de una letra H o M, seguido de cinco letras mayúsculas y finalmente dos números.
-*/
-ADD CONSTRAINT CHK_correo CHECK (correo REGEXP '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'),
-ADD CONSTRAINT CHK_curp CHECK (curp REGEXP '^[A-Z]{4}[0-9]{6}[HM][A-Z]{5}[0-9]{2}$');
-
-
+-- Tabla convocatorias
 CREATE TABLE convocatorias (
     id_convocatoria INT AUTO_INCREMENT PRIMARY KEY,
     anio INT NOT NULL,
     numero_convocatoria INT NOT NULL,
     fecha_inicio DATE NOT NULL,
-    fecha_fin DATE NOT NULL
+    fecha_fin DATE NOT NULL,
+    CONSTRAINT UK_anio_numero UNIQUE (anio, numero_convocatoria),
+    CONSTRAINT CHK_numero_convocatoria CHECK (numero_convocatoria IN (1, 2))
 );
 
-ALTER TABLE convocatorias
-ADD CONSTRAINT UK_anio_numero UNIQUE (anio, numero_convocatoria);
-
-/*
-    2)
-    A continuación se agrega un trigger que evita que se inserten más de dos convocatorias por año.
-*/
-DELIMITER //
-
-CREATE TRIGGER before_insert_convocatoria
-BEFORE INSERT ON convocatorias
-FOR EACH ROW
-BEGIN
-    DECLARE convocatorias_count INT;
-
-    SELECT COUNT(*)
-    INTO convocatorias_count
-    FROM convocatorias
-    WHERE anio = NEW.anio;
-
-    IF convocatorias_count >= 2 THEN
-        SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'No se pueden crear más de dos convocatorias por año';
-    END IF;
-END//
-
-DELIMITER ;
-
-
-/*
-    2)
-    Se crea una tabla para almacenar los costos de los exámenes asociados a las convocatorias.
-*/
+-- Tabla costos_examen
 CREATE TABLE costos_examen (
     id INT AUTO_INCREMENT PRIMARY KEY,
     convocatoria_id INT,
     costo DECIMAL(10, 2) NOT NULL,
-    FOREIGN KEY (convocatoria_id) REFERENCES convocatorias(id_convocatoria)
+    FOREIGN KEY (convocatoria_id) REFERENCES convocatorias(id_convocatoria),
+    CONSTRAINT CHK_costo CHECK (costo > 0)
 );
 
-ALTER TABLE costos_examen
-ADD CONSTRAINT CHK_costo CHECK (costo > 0);
-
+-- Tabla catalogo_carreras
 CREATE TABLE catalogo_carreras (
     id_carrera INT AUTO_INCREMENT PRIMARY KEY,
     nombre_carrera VARCHAR(100) NOT NULL,
     estatus ENUM('activa', 'inactiva') NOT NULL DEFAULT 'activa',
-    fecha_alta DATE NOT NULL DEFAULT CURRENT_DATE
+    fecha_alta DATE NOT NULL DEFAULT CURRENT_DATE,
+    CONSTRAINT UK_nombre_carrera UNIQUE (nombre_carrera),
+    CONSTRAINT CHK_fecha_alta CHECK (fecha_alta >= CURRENT_DATE)
 );
 
-ALTER TABLE catalogo_carreras
-ADD CONSTRAINT UK_nombre_carrera UNIQUE (nombre_carrera);
-
-/*
-    4)
-    Se crea un trigger que evita que se inserten carreras con una fecha de alta atrás de la fecha actual.
-*/
-
-DELIMITER //
-
-CREATE TRIGGER before_insert_catalogo_carreras
-BEFORE INSERT ON catalogo_carreras
-FOR EACH ROW
-BEGIN
-    IF NEW.fecha_alta < CURRENT_DATE THEN
-        SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'No se puede insertar un registro con una fecha de alta pasada';
-    END IF;
-END//
-
-DELIMITER ;
-
+-- Tabla opciones_carrera
 CREATE TABLE opciones_carrera (
     id INT AUTO_INCREMENT PRIMARY KEY,
     aspirante_id INT,
@@ -128,89 +69,95 @@ CREATE TABLE opciones_carrera (
     prioridad INT NOT NULL,
     FOREIGN KEY (aspirante_id) REFERENCES aspirantes(id_aspirante),
     FOREIGN KEY (convocatoria_id) REFERENCES convocatorias(id_convocatoria),
-    FOREIGN KEY (carrera_id) REFERENCES catalogo_carreras(id_carrera)
+    FOREIGN KEY (carrera_id) REFERENCES catalogo_carreras(id_carrera),
+    CONSTRAINT CHK_prioridad CHECK (prioridad >= 1),
+    CONSTRAINT UK_aspirante_convocatoria_prioridad UNIQUE (aspirante_id, convocatoria_id, prioridad),
+    CONSTRAINT UK_aspirante_convocatoria_carrera UNIQUE (aspirante_id, convocatoria_id, carrera_id),
+    CONSTRAINT UK_aspirante_convocatoria UNIQUE (aspirante_id, convocatoria_id)
 );
 
-ALTER TABLE opciones_carrera
-ADD CONSTRAINT CHK_prioridad CHECK (prioridad >= 1),
-ADD CONSTRAINT UK_aspirante_convocatoria_prioridad UNIQUE (aspirante_id, convocatoria_id, prioridad),
-ADD CONSTRAINT UK_aspirante_convocatoria_carrera UNIQUE (aspirante_id, convocatoria_id, carrera_id);
-
---Quiser usar un check pero me botaba este error, por eso implemente el siguiente Trigger
-
-/*
-    4) Trigger que evita que se inserten opciones de carrera con carreras inactivas.
-*/
+-- Trigger para asegurar que la carrera esté activa antes de insertar en opciones_carrera
 DELIMITER //
 
-CREATE TRIGGER before_insert_opciones_carrera
+CREATE TRIGGER before_opciones_carrera_insert
 BEFORE INSERT ON opciones_carrera
 FOR EACH ROW
 BEGIN
-    DECLARE v_carrera_activa INT;
+    DECLARE carrera_status VARCHAR(10);
 
-    -- Verificar si la carrera seleccionada está activa
-    SELECT COUNT(*)
-    INTO v_carrera_activa
+    -- Obtiene el estatus de la carrera
+    SELECT estatus INTO carrera_status
     FROM catalogo_carreras
-    WHERE id_carrera = NEW.carrera_id AND estatus = 'activa';
+    WHERE id_carrera = NEW.carrera_id;
 
-
-    IF v_carrera_activa = 0 THEN
-        SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'No se puede seleccionar una carrera inactiva';
+    -- Verifica si la carrera está activa
+    IF carrera_status != 'activa' THEN
+        SIGNAL SQLSTATE '45000' 
+        SET MESSAGE_TEXT = 'La carrera no está activa';
     END IF;
-END//
+END //
 
 DELIMITER ;
 
-
-CREATE TABLE registro_examen (
-    id_regexamen INT AUTO_INCREMENT PRIMARY KEY,
-    aspirante_id INT,
-    convocatoria_id INT,
-    token VARCHAR(100) NOT NULL,
-    fecha_solicitud TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    estado ENUM('PENDIENTE', 'COMPLETADO') DEFAULT 'PENDIENTE',
-    FOREIGN KEY (aspirante_id) REFERENCES aspirantes(id_aspirante),
-    FOREIGN KEY (convocatoria_id) REFERENCES convocatorias(id_convocatoria)
-);
-
-ALTER TABLE registro_examen
-ADD CONSTRAINT UK_aspirante_convocatoria UNIQUE (aspirante_id, convocatoria_id),
-ADD CONSTRAINT UK_token UNIQUE (token);
-
-/*No permite cambiar el estatus a completado, hasta que 
- el aspirante tenga seleccionadas sus tres opciones de carrera 
-*/
-
+-- Trigger para asegurar que la carrera esté activa antes de actualizar en opciones_carrera
 DELIMITER //
 
-CREATE PROCEDURE completar_registro(
-    IN p_aspirante_id INT,
-    IN p_convocatoria_id INT
-)
+CREATE TRIGGER before_opciones_carrera_update
+BEFORE UPDATE ON opciones_carrera
+FOR EACH ROW
 BEGIN
-    DECLARE v_cantidad_opciones INT DEFAULT 0;
+    DECLARE carrera_status VARCHAR(10);
 
-    -- Verificamos que el aspirante haya seleccionado al menos tres opciones de carrera
-    SELECT COUNT(*)
-    INTO v_cantidad_opciones
-    FROM opciones_carrera
-    WHERE aspirante_id = p_aspirante_id AND convocatoria_id = p_convocatoria_id;
+    -- Obtiene el estatus de la carrera
+    SELECT estatus INTO carrera_status
+    FROM catalogo_carreras
+    WHERE id_carrera = NEW.carrera_id;
 
-    -- Actualizar el estado a COMPLETADO
-    IF v_cantidad_opciones >= 3 THEN
-        UPDATE registro_examen
-        SET estado = 'COMPLETADO'
-        WHERE aspirante_id = p_aspirante_id AND convocatoria_id = p_convocatoria_id;
-    ELSE
-        SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'El aspirante debe seleccionar al menos tres opciones de carrera para completar el registro.';
+    -- Verifica si la carrera está activa
+    IF carrera_status != 'activa' THEN
+        SIGNAL SQLSTATE '45000' 
+        SET MESSAGE_TEXT = 'La carrera no está activa';
     END IF;
-END//
+END //
 
 DELIMITER ;
 
--- Ejemplo de uso del procedimiento almacenado
--- CALL completar_registro(1, 1);
+-- Tabla registros
+CREATE TABLE registros (
+    id_registro INT AUTO_INCREMENT PRIMARY KEY,
+    aspirante_id INT,
+    estado ENUM('PENDIENTE', 'COMPLETO') NOT NULL DEFAULT 'PENDIENTE',
+    FOREIGN KEY (aspirante_id) REFERENCES aspirantes(id_aspirante)
+);
+
+-- Tabla tokens
+CREATE TABLE tokens (
+    id_token INT AUTO_INCREMENT PRIMARY KEY,
+    registro_id INT,
+    token VARCHAR(255) NOT NULL,
+    fecha_generacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (registro_id) REFERENCES registros(id_registro)
+);
+
+-- Trigger para validar la generación de tokens
+DELIMITER //
+
+CREATE TRIGGER before_token_insert
+BEFORE INSERT ON tokens
+FOR EACH ROW
+BEGIN
+    DECLARE registro_estado ENUM('PENDIENTE', 'COMPLETO');
+
+    -- Obtiene el estado del registro
+    SELECT estado INTO registro_estado
+    FROM registros
+    WHERE id_registro = NEW.registro_id;
+
+    -- Verifica si el estado del registro es 'COMPLETO'
+    IF registro_estado = 'COMPLETO' THEN
+        SIGNAL SQLSTATE '45000' 
+        SET MESSAGE_TEXT = 'No se pueden generar tokens para un registro completo';
+    END IF;
+END //
+
+DELIMITER ;
