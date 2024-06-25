@@ -18,6 +18,44 @@ CREATE DATABASE BD_Pruebas;
 
 USE BD_Pruebas;
 
+-- Tabla para tokens de correos
+CREATE TABLE tokens_emails (
+    id_token INT AUTO_INCREMENT PRIMARY KEY,
+    token VARCHAR(255) NOT NULL,
+    email VARCHAR(100) NOT NULL,
+    fecha_generacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    validado BOOLEAN DEFAULT FALSE,
+    procesado BOOLEAN DEFAULT FALSE
+);
+
+DELIMITER //
+
+CREATE TRIGGER before_insert_tokens_emails
+BEFORE INSERT ON tokens_emails
+FOR EACH ROW
+BEGIN
+    DECLARE v_count INT;
+
+    -- Verificar si el correo ya está registrado con validado y procesado en true
+    SELECT COUNT(*)
+    INTO v_count
+    FROM tokens_emails
+    WHERE email = NEW.email
+      AND validado = TRUE
+      AND procesado = TRUE;
+
+    -- Si existe al menos un registro, no permitir la inserción y lanzar un error
+    IF v_count > 0 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Este correo ya ha sido registrado para esta convocatoria';
+    END IF;
+END//
+
+DELIMITER ;
+
+
+
+
 -- Tabla aspirantes
 CREATE TABLE aspirantes (
     id_aspirante INT AUTO_INCREMENT PRIMARY KEY,
