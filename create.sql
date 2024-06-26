@@ -55,6 +55,17 @@ DELIMITER ;
 
 
 
+-- Tabla convocatorias
+CREATE TABLE convocatorias (
+    id_convocatoria INT AUTO_INCREMENT PRIMARY KEY,
+    anio INT NOT NULL,
+    numero_convocatoria INT NOT NULL,
+    fecha_inicio DATE NOT NULL,
+    fecha_fin DATE NOT NULL,
+    CONSTRAINT UK_anio_numero UNIQUE (anio, numero_convocatoria),
+    CONSTRAINT CHK_numero_convocatoria CHECK (numero_convocatoria IN (1, 2)),
+    CONSTRAINT CHK_anio CHECK (anio > 0)
+);
 
 -- Tabla aspirantes
 CREATE TABLE aspirantes (
@@ -68,18 +79,6 @@ CREATE TABLE aspirantes (
     CONSTRAINT CHK_correo CHECK (correo REGEXP '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'),
     CONSTRAINT CHK_curp CHECK (curp REGEXP '^[A-Z]{4}[0-9]{6}[HM][A-Z]{5}[0-9]{2}$'),
     FOREIGN KEY (id_convocatoria) REFERENCES convocatorias(id_convocatoria)
-);
-
--- Tabla convocatorias
-CREATE TABLE convocatorias (
-    id_convocatoria INT AUTO_INCREMENT PRIMARY KEY,
-    anio INT NOT NULL,
-    numero_convocatoria INT NOT NULL,
-    fecha_inicio DATE NOT NULL,
-    fecha_fin DATE NOT NULL,
-    CONSTRAINT UK_anio_numero UNIQUE (anio, numero_convocatoria),
-    CONSTRAINT CHK_numero_convocatoria CHECK (numero_convocatoria IN (1, 2)),
-    CONSTRAINT CHK_anio CHECK (anio > 0)
 );
 
 -- Tabla costos_examen
@@ -108,9 +107,8 @@ CREATE TABLE opciones_carrera (
     FOREIGN KEY (aspirante_id) REFERENCES aspirantes(id_aspirante),
     FOREIGN KEY (carrera_id) REFERENCES catalogo_carreras(id_carrera),
     CONSTRAINT CHK_prioridad CHECK (prioridad >= 1),
-    CONSTRAINT UK_aspirante_convocatoria_prioridad UNIQUE (aspirante_id, convocatoria_id, prioridad),
-    CONSTRAINT UK_aspirante_convocatoria_carrera UNIQUE (aspirante_id, convocatoria_id, carrera_id),
-    CONSTRAINT UK_aspirante_convocatoria UNIQUE (aspirante_id, convocatoria_id) 
+    CONSTRAINT UK_aspirante_convocatoria_prioridad UNIQUE (aspirante_id, prioridad),
+    CONSTRAINT UK_aspirante_convocatoria_carrera UNIQUE (aspirante_id, carrera_id)
 );
 
 -- Trigger para asegurar que la carrera esté activa antes de insertar en opciones_carrera
