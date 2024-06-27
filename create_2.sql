@@ -96,6 +96,7 @@ CREATE TABLE aspirantes (
     FOREIGN KEY (id_token_correo) REFERENCES tokens_correos(id_token_correo)
 ) ENGINE=InnoDB;
 
+
 -- Tabla catalogo_carreras
 CREATE TABLE catalogo_carreras (
     id_carrera INT AUTO_INCREMENT PRIMARY KEY,
