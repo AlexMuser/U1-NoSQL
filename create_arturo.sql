@@ -23,14 +23,14 @@ CREATE TABLE tokens_correos (
     correo VARCHAR(100) NOT NULL PRIMARY KEY,
     token VARCHAR(255) NOT NULL,
     fecha_generacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    validado BOOLEAN DEFAULT FALSE,
-    procesado BOOLEAN DEFAULT FALSE,
+    correo_validado BOOLEAN DEFAULT FALSE,
+    registro_completado BOOLEAN DEFAULT FALSE,
     CONSTRAINT CHK_correo CHECK (correo REGEXP '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
 ) ENGINE=InnoDB;
 
 
--- Trigger para asegurar que el correo no se repita con validado y procesado en true
--- Y si ya existe un registro con el correo pero no esta validado o procesado, permitir la inserción pero antes eliminar el registro anterior
+-- Trigger para asegurar que el correo no se repita con correo_validado y registro_completado en true
+-- Y si ya existe un registro con el correo pero no esta correo_validado o registro_completado, permitir la inserción pero antes eliminar el registro anterior
 DELIMITER //
 
 CREATE TRIGGER before_insert_tokens_correos
@@ -39,13 +39,13 @@ FOR EACH ROW
 BEGIN
     DECLARE v_count INT;
 
-    -- Verificar si el correo ya está registrado con validado y procesado en true
+    -- Verificar si el correo ya está registrado con correo_validado y registro_completado en true
     SELECT COUNT(*)
     INTO v_count
     FROM tokens_correos
     WHERE correo = NEW.correo
-      AND validado = TRUE
-      AND procesado = TRUE;
+      AND correo_validado = TRUE
+      AND registro_completado = TRUE;
 
     -- Si existe al menos un registro, no permitir la inserción y lanzar un error
     IF v_count > 0 THEN
