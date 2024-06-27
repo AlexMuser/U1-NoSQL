@@ -69,6 +69,8 @@ CREATE TABLE convocatorias (
     numero_convocatoria INT NOT NULL,
     fecha_inicio DATE NOT NULL,
     fecha_fin DATE NOT NULL,
+    costo DECIMAL(10, 2) NOT NULL,
+    CONSTRAINT CHK_costo CHECK (costo > 0),
     CONSTRAINT UK_anio_numero UNIQUE (anio, numero_convocatoria),
     CONSTRAINT CHK_numero_convocatoria CHECK (numero_convocatoria IN (1, 2)),
     CONSTRAINT CHK_anio CHECK (anio > 0)
@@ -87,14 +89,6 @@ CREATE TABLE aspirantes (
     CONSTRAINT CHK_curp CHECK (curp REGEXP '^[A-Z]{4}[0-9]{6}[HM][A-Z]{5}[0-9]{2}$'),
     FOREIGN KEY (id_convocatoria) REFERENCES convocatorias(id_convocatoria),
     FOREIGN KEY (correo) REFERENCES tokens_correos(correo)
-) ENGINE=InnoDB;
-
--- Tabla costos_examen
-CREATE TABLE costos_examen (
-    id_convocatoria INT PRIMARY KEY,
-    costo DECIMAL(10, 2) NOT NULL,
-    FOREIGN KEY (id_convocatoria) REFERENCES convocatorias(id_convocatoria),
-    CONSTRAINT CHK_costo CHECK (costo > 0)
 ) ENGINE=InnoDB;
 
 -- Tabla catalogo_carreras
