@@ -29,7 +29,7 @@ CREATE TABLE tokens_correos (
 ) ENGINE=InnoDB;
 
 
--- Trigger para asegurar que el correo no se repita con correo_validado y registro_completado en true
+-- Trigger para asegurar que el correo no se repita si correo_validado = true y registro_completado = true
 -- Y si ya existe un registro con el correo pero no esta correo_validado o registro_completado, permitir la inserción pero antes eliminar el registro anterior
 DELIMITER //
 
@@ -52,7 +52,7 @@ BEGIN
         SIGNAL SQLSTATE '45000'
         SET MESSAGE_TEXT = 'Este correo ya ha sido registrado para esta convocatoria';
     ELSE
-        -- Eliminar el registro anterior
+        -- Eliminar el registro anterior en caso de que exista
         DELETE FROM tokens_correos
         WHERE correo = NEW.correo;
     END IF;
@@ -75,7 +75,7 @@ CREATE TABLE convocatorias (
     CONSTRAINT CHK_numero_convocatoria CHECK (numero_convocatoria IN (1, 2)),
     CONSTRAINT CHK_anio CHECK (anio > 0)
 ) ENGINE=InnoDB;
-
+ 
 -- Tabla aspirantes
 CREATE TABLE aspirantes (
     id_aspirante INT AUTO_INCREMENT PRIMARY KEY,
@@ -98,7 +98,7 @@ CREATE TABLE catalogo_carreras (
     estatus ENUM('activa', 'inactiva') NOT NULL DEFAULT 'activa',
     fecha_alta DATE NOT NULL,
     CONSTRAINT UK_nombre_carrera UNIQUE (nombre_carrera)
-)ENGINE=InnoDB;
+) ENGINE=InnoDB;
 
 -- Tabla opciones_carrera
 CREATE TABLE opciones_carrera (
