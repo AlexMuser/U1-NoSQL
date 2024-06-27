@@ -30,46 +30,32 @@ VALUES (2024, 3, '2024-07-01', '2024-07-31', 100.00);
 
 -- Insertar valores en tokens_correos
 
-INSERT INTO tokens_correos (id_token_correo, correo, curp, id_convocatoria) VALUES (1, 'qwerty@outlook.com', 'ABCD123456HCHLKN12', 1);
-INSERT INTO tokens_correos (id_token_correo, correo, curp, id_convocatoria) VALUES (2, 'alfredo@outlook.com','ABCD123456HCHLKN12', 1);
+INSERT INTO tokens_correos (id_token_correo, correo, curp, id_convocatoria) VALUES (1, 'noel@outlook.com', 'ABCD123456HCHLKN12', 1);
+INSERT INTO tokens_correos (correo, curp, id_convocatoria) VALUES ('alfredo@outlook.com','ABCD123456HCHLKN12', 1);
+
+-- Alfredo pide otro token
+INSERT INTO tokens_correos (correo, curp, id_convocatoria) VALUES ('alfredo@outlook.com','ABCD123456HCHLKN12', 1);
+
+
+
+
 
 
 -- Simulamos que el usuario qwerty ha validado el correo y completado el registro
 UPDATE tokens_correos
 SET correo_validado = 1
-WHERE id_token_correo = 2;
+WHERE id_token_correo = 1;
 
 
-CALL RegisterAspirante(2, "Juan Perez", 1, 2, 3); 
+CALL RegisterAspirante(1, "Noel", 1, 2, 3); 
 
 
 
--- Intentamos que el usuario qwerty se registre de nuevo en la misma convocatoria 
--- (DEBE TRONAR)
-INSERT INTO tokens_correos (correo, id_convocatoria) VALUES ('alfredo@outlook.com', 1);
+-- Alfredo pide otro token (TRUENA PORQUE ESTA REGISTRADO EL MISMO CURP)
+INSERT INTO tokens_correos (correo, curp, id_convocatoria) VALUES ('alfredo@outlook.com','ABCD123456HCHLKN12', 1);
 
 
--- Ahora lo registramos en otra convocatoria
-INSERT INTO tokens_correos (id_token_correo, correo, id_convocatoria) VALUES (3, 'qwerty@outlook.com', 2);
-
-
--- Intentamos que el usuario qwerty genere mas tokens, sin haber completado el registro
-INSERT INTO tokens_correos (id_token_correo, correo, id_convocatoria) VALUES (4, 'alfredo@outlook.com', 1);
-
-
--- Vemos como hay mas de un token para qwerty en la convocatoria 1
-SELECT * FROM tokens_correos WHERE correo = 'alfredo@outlook.com';
-
-
--- Simulamos que el usuario qwerty ha ha validado el correo y completado el registro
-UPDATE tokens_correos
-SET registro_completado = 1, correo_validado = 1
-WHERE id_token_correo = 4;
-
-
--- Intentamos que el usuario qwerty genere mas tokens, habiendo completado el registro 
--- (DEBE TRONAR)
-INSERT INTO tokens_correos (correo, id_convocatoria) VALUES ('alfredo@outlook.com', 1);
-
+-- Si noel quiere volver a pedir otro token con el mismo correo tampoco lo dejara 
+INSERT INTO tokens_correos (correo, curp, id_convocatoria) VALUES ('noel@outlook.com','ABCD123456HCHLKN12', 1);
 
 

@@ -215,21 +215,17 @@ BEGIN
 
     DECLARE EXIT HANDLER FOR SQLEXCEPTION
     BEGIN
-        -- Capturar el error
+        -- Manejo de errores
         GET DIAGNOSTICS CONDITION 1
             @p1 = RETURNED_SQLSTATE, @p2 = MESSAGE_TEXT;
 
-        -- Deshacer la transacción
         ROLLBACK;
 
-        -- Asignar el mensaje de error a la variable
         SET v_error_message = CONCAT('Error: ', @p1, ', ', @p2);
 
-        -- Lanzar el mensaje de error
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = v_error_message;
     END;
 
-    -- Iniciar la transacción
     START TRANSACTION;
 
     -- Recuperar correo, id_convocatoria y correo_validado basado en id_token_correo
@@ -262,7 +258,6 @@ BEGIN
     SET registro_completado = TRUE
     WHERE id_token_correo = p_id_token_correo;
 
-    -- Confirmar la transacción
     COMMIT;
 END$$
 
