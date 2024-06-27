@@ -222,3 +222,77 @@ END$$
 DELIMITER ;
 
 
+
+
+
+DELIMITER $$
+
+CREATE PROCEDURE RegisterAspirante(
+    IN p_id_token_correo INT,
+    IN p_nombre VARCHAR(255),
+    IN p_curp VARCHAR(18),
+    IN p_carrera_op1 INT,
+    IN p_carrera_op2 INT,
+    IN p_carrera_op3 INT
+)
+BEGIN
+    DECLARE v_correo VARCHAR(255);
+    DECLARE v_id_convocatoria INT;
+    DECLARE v_aspirante_id INT;
+    DECLARE v_correo_validado BOOLEAN;
+    DECLARE v_error_message VARCHAR(255);
+
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        -- Capturar el error
+        GET DIAGNOSTICS CONDITION 1
+            @p1 = RETURNED_SQLSTATE, @p2 = MESSAGE_TEXT;
+
+        -- Deshacer la transacción
+        ROLLBACK;
+
+        -- Asignar el mensaje de error a la variable
+        SET v_error_message = CONCAT('Error: ', @p1, ', ', @p2);
+
+        -- Lanzar el mensaje de error
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = v_error_message;
+    END;
+
+    -- Iniciar la transacción
+    START TRANSACTION;
+
+    -- Recuperar correo, id_convocatoria y correo_validado basado en id_token_correo
+    SELECT correo, id_convocatoria, correo_validado INTO v_correo, v_id_convocatoria, v_correo_validado
+    FROM tokens_correos
+    WHERE id_token_correo = p_id_token_correo;
+
+    -- Verificar si correo_validado es falso o nulo
+    IF v_correo_validado = FALSE OR v_correo_validado IS NULL THEN
+        -- Deshacer la transacción y lanzar un error
+        ROLLBACK;
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Correo no validado';
+    END IF;
+
+    -- Insertar en la tabla aspirantes
+    INSERT INTO aspirantes(nombre, curp, correo, id_convocatoria, id_token_correo)
+    VALUES (p_nombre, p_curp, v_correo, v_id_convocatoria, p_id_token_correo);
+
+    -- Obtener el último aspirante_id insertado
+    SET v_aspirante_id = LAST_INSERT_ID();
+
+    -- Insertar opciones de carrera con prioridades
+    INSERT INTO opciones_carrera(aspirante_id, carrera_id, prioridad)
+    VALUES (v_aspirante_id, p_carrera_op1, 1),
+           (v_aspirante_id, p_carrera_op2, 2),
+           (v_aspirante_id, p_carrera_op3, 3);
+
+    -- Establecer registro_completado a verdadero para el id_token_correo dado
+    UPDATE tokens_correos
+    SET registro_completado = TRUE
+    WHERE id_token_correo = p_id_token_correo;
+
+    -- Confirmar la transacción
+    COMMIT;
+END$$
+
+DELIMITER ;

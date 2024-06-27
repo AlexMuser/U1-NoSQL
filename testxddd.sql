@@ -39,3 +39,8 @@ CALL RegisterAspirante(1, "Juan Perez", "ABCD123456HCHLKN12", 1, 2, 5);
 
 delete from opciones_carrera;
 delete from aspirantes;
+
+
+
+
+
