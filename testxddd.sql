@@ -18,20 +18,20 @@ VALUES (2, 2024, 2, '2024-07-01', '2024-07-31', 100.00);
 
 
 
-INSERT INTO tokens_correos (id_token_correo, correo, id_convocatoria) VALUES (1, 'qwerty@outlook.com', 1);
-INSERT INTO tokens_correos (id_token_correo, correo, id_convocatoria) VALUES (2, 'alfredo@outlook.com', 1);
-INSERT INTO tokens_correos (id_token_correo, correo, id_convocatoria) VALUES (3, 'alfredo@outlook.com', 2);
-INSERT INTO tokens_correos (id_token_correo, correo, id_convocatoria) VALUES (4, 'qwerty@outlook.com', 2);
+INSERT INTO tokens_correos (id_token_correo, correo, curp, id_convocatoria) VALUES (1, 'qwerty@outlook.com', 'ABCD123456HCHLKN12', 1);
+INSERT INTO tokens_correos (id_token_correo, correo, curp, id_convocatoria) VALUES (2, 'alfredo@outlook.com','ABCD123456HCHLKN12', 1);
+INSERT INTO tokens_correos (id_token_correo, correo, curp, id_convocatoria) VALUES (3, 'alfredo@outlook.com', 'ABCD123456HCHLKN12', 2);
+INSERT INTO tokens_correos (id_token_correo, correo, curp, id_convocatoria) VALUES (4, 'qwerty@outlook.com', 'ABCD123456HCHLKN12', 2);
 
 UPDATE tokens_correos
 SET correo_validado = 1
 WHERE id_token_correo = 1;
 
 
-CALL RegisterAspirante(1, "Juan Perez", "ABCD123456HCHLKN12", 1, 2, 3); 
-CALL RegisterAspirante(2, "Juan Perez", "ABCD123456HCHLKN13", 1, 2, 4); 
-CALL RegisterAspirante(3, "Juan Perez", "ABCD123456HCHLKN13", 1, 2, 4);
-CALL RegisterAspirante(4, "qwerty", "ABCD123456HCHLKN13", 1, 2, 4);
+CALL RegisterAspirante(1, "Juan Perez", 1, 2, 3); 
+CALL RegisterAspirante(2, "Juan Perez", 1, 2, 4); 
+CALL RegisterAspirante(3, "Juan Perez", 1, 2, 4);
+CALL RegisterAspirante(4, "qwerty", 1, 2, 4);
  
 CALL RegisterAspirante(1, "Juan Perez", "ABCD123456HCHLKN12", 1, 2, 5); 
 

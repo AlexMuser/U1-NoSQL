@@ -38,12 +38,14 @@ CREATE TABLE convocatorias (
 CREATE TABLE tokens_correos (
     id_token_correo INT AUTO_INCREMENT PRIMARY KEY,
     correo VARCHAR(100) NOT NULL,
+    curp VARCHAR(18) NOT NULL,
     token VARCHAR(255),
     fecha_generacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     correo_validado BOOLEAN DEFAULT FALSE,
     registro_completado BOOLEAN DEFAULT FALSE,
     id_convocatoria INT NOT NULL,
-    CONSTRAINT CHK_correo CHECK (correo REGEXP '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'),
+    CONSTRAINT CHK_correo_tokens CHECK (correo REGEXP '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'),
+    CONSTRAINT CHK_curp_tokens CHECK (curp REGEXP '^[A-Z]{4}[0-9]{6}[HM][A-Z]{5}[0-9]{2}$'),
     FOREIGN KEY (id_convocatoria) REFERENCES convocatorias(id_convocatoria)
 ) ENGINE=InnoDB;
 
@@ -74,6 +76,24 @@ BEGIN
     ELSE
         SET NEW.token = SUBSTRING(uuid(), 1, 8);
     END IF;
+
+    -- Verificar si el curp ya está registrado con correo_validado y registro_completado en true
+    SELECT COUNT(*)
+    INTO v_count
+    FROM tokens_correos
+    WHERE curp = NEW.curp
+      AND correo_validado = TRUE
+      AND registro_completado = TRUE
+      AND id_convocatoria = NEW.id_convocatoria;
+
+    -- Si existe al menos un registro, no permitir la inserción y lanzar un error
+    IF v_count > 0 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Esta curp ya ha sido registrada para esta convocatoria';
+    ELSE
+        SET NEW.token = SUBSTRING(uuid(), 1, 8);
+    END IF;
+    
 END//
 
 DELIMITER ;
@@ -173,55 +193,6 @@ DELIMITER ;
 
 
 
-DELIMITER $$
-
-CREATE PROCEDURE RegisterAspirante(
-    IN p_id_token_correo INT,
-    IN p_nombre VARCHAR(255),
-    IN p_curp VARCHAR(18),
-    IN p_carrera_op1 INT,
-    IN p_carrera_op2 INT,
-    IN p_carrera_op3 INT
-)
-BEGIN
-    DECLARE v_correo VARCHAR(255);
-    DECLARE v_id_convocatoria INT;
-    DECLARE v_aspirante_id INT;
-    DECLARE v_correo_validado BOOLEAN;
-
-    -- Recuperar correo, id_convocatoria y correo_validado basado en id_token_correo
-    SELECT correo, id_convocatoria, correo_validado INTO v_correo, v_id_convocatoria, v_correo_validado
-    FROM tokens_correos
-    WHERE id_token_correo = p_id_token_correo;
-
-    -- Verificar si correo_validado es verdadero
-    IF v_correo_validado = FALSE THEN
-        SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'Correo no validado';
-    END IF;
-
-    -- Insertar en la tabla aspirantes
-    INSERT INTO aspirantes(nombre, curp, correo, id_convocatoria, id_token_correo)
-    VALUES (p_nombre, p_curp, v_correo, v_id_convocatoria, p_id_token_correo);
-
-    -- Obtener el último aspirante_id insertado
-    SET v_aspirante_id = LAST_INSERT_ID();
-
-    -- Insertar opciones de carrera con prioridades
-    INSERT INTO opciones_carrera(aspirante_id, carrera_id, prioridad)
-    VALUES (v_aspirante_id, p_carrera_op1, 1),
-           (v_aspirante_id, p_carrera_op2, 2),
-           (v_aspirante_id, p_carrera_op3, 3);
-
-    -- Establecer registro_completado a verdadero para el id_token_correo dado
-    UPDATE tokens_correos
-    SET registro_completado = TRUE
-    WHERE id_token_correo = p_id_token_correo;
-END$$
-
-DELIMITER ;
-
-
 
 
 
@@ -230,7 +201,6 @@ DELIMITER $$
 CREATE PROCEDURE RegisterAspirante(
     IN p_id_token_correo INT,
     IN p_nombre VARCHAR(255),
-    IN p_curp VARCHAR(18),
     IN p_carrera_op1 INT,
     IN p_carrera_op2 INT,
     IN p_carrera_op3 INT
@@ -238,6 +208,7 @@ CREATE PROCEDURE RegisterAspirante(
 BEGIN
     DECLARE v_correo VARCHAR(255);
     DECLARE v_id_convocatoria INT;
+    DECLARE p_curp VARCHAR(18);
     DECLARE v_aspirante_id INT;
     DECLARE v_correo_validado BOOLEAN;
     DECLARE v_error_message VARCHAR(255);
@@ -262,7 +233,7 @@ BEGIN
     START TRANSACTION;
 
     -- Recuperar correo, id_convocatoria y correo_validado basado en id_token_correo
-    SELECT correo, id_convocatoria, correo_validado INTO v_correo, v_id_convocatoria, v_correo_validado
+    SELECT correo, id_convocatoria, correo_validado, curp INTO v_correo, v_id_convocatoria, v_correo_validado, p_curp
     FROM tokens_correos
     WHERE id_token_correo = p_id_token_correo;
 
