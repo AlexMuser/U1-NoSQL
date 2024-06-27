@@ -108,6 +108,7 @@ CREATE TABLE catalogo_carreras (
     CONSTRAINT UK_nombre_carrera UNIQUE (nombre_carrera)
 ) ENGINE=InnoDB;
 
+
 -- Tabla opciones_carrera
 CREATE TABLE opciones_carrera (
     aspirante_id INT,
@@ -172,7 +173,6 @@ DELIMITER ;
 
 
 
-
 DELIMITER $$
 
 CREATE PROCEDURE RegisterAspirante(
@@ -189,31 +189,31 @@ BEGIN
     DECLARE v_aspirante_id INT;
     DECLARE v_correo_validado BOOLEAN;
 
-    -- Retrieve correo, id_convocatoria, and correo_validado based on id_token_correo
+    -- Recuperar correo, id_convocatoria y correo_validado basado en id_token_correo
     SELECT correo, id_convocatoria, correo_validado INTO v_correo, v_id_convocatoria, v_correo_validado
     FROM tokens_correos
     WHERE id_token_correo = p_id_token_correo;
 
-    -- Check if correo_validado is true
+    -- Verificar si correo_validado es verdadero
     IF v_correo_validado = FALSE THEN
         SIGNAL SQLSTATE '45000'
         SET MESSAGE_TEXT = 'Correo no validado';
     END IF;
 
-    -- Insert into aspirantes table
+    -- Insertar en la tabla aspirantes
     INSERT INTO aspirantes(nombre, curp, correo, id_convocatoria, id_token_correo)
     VALUES (p_nombre, p_curp, v_correo, v_id_convocatoria, p_id_token_correo);
 
-    -- Get the last inserted aspirante_id
+    -- Obtener el último aspirante_id insertado
     SET v_aspirante_id = LAST_INSERT_ID();
 
-    -- Insert carrera options with priorities
+    -- Insertar opciones de carrera con prioridades
     INSERT INTO opciones_carrera(aspirante_id, carrera_id, prioridad)
     VALUES (v_aspirante_id, p_carrera_op1, 1),
            (v_aspirante_id, p_carrera_op2, 2),
            (v_aspirante_id, p_carrera_op3, 3);
 
-    -- Set registro_completado to true for the given id_token_correo
+    -- Establecer registro_completado a verdadero para el id_token_correo dado
     UPDATE tokens_correos
     SET registro_completado = TRUE
     WHERE id_token_correo = p_id_token_correo;
